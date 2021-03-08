@@ -6,10 +6,18 @@ import numpy as np
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
+# meshing
 import pygalmesh
+import pygmsh  # is this really necessary?
+import gmsh  # background mesh specifying element sizes! --> very interesting / open, merge, write, addvolume , addsurfaceloop
+# https://github.com/nschloe/pygmsh/issues/279
+# import tetgen  #  pip install tetgen --> look up how that works
 import meshio
 
+# marching cubes
 from skimage import measure
+import mcubes
 
 def sitk2np(img_sitk, pixel_type=np.float32):
     """
@@ -57,9 +65,28 @@ points = np.array(verts)
 cells = [("triangle", np.array(faces))]
 meshio.write_points_cells('out.vtu', points, cells)
 meshio.write_points_cells('out.inp', points, cells)
+meshio.write_points_cells('out.stl', points, cells)
 
-pymesh = pygalmesh.generate_volume_mesh_from_surface_mesh('out.vtu')
+# gmsh
+gmsh.initialize()
+gmsh.merge("/home/ygugler/Code/tetmeshing/out.stl")
+n = gmsh.model.getDimension()
+s = gmsh.model.getEntities(n)
+l = gmsh.model.geo.addSurfaceLoop([s[i][1] for i in range(len(s))])
+gmsh.model.geo.add_surface_loop([faces[i][1] for i in range(np.size(faces[0]))])
+gmsh.model.geo.addVolume([l])
+gmsh.model.geo.synchronize()
+gmsh.model.mesh.generate(3)
+gmsh.write("/home/ygugler/Code/tetmeshing/out.msh")
+gmsh.finalize()
 
+
+mesh_new = meshio.read("/home/ygugler/Code/tetmeshing/out.msh")
+mesh_new_abq = meshio.write("/home/ygugler/Code/tetmeshing/out2.inp", mesh_new)
+
+
+# pygalmesh
+# pymesh = pygalmesh.generate_volume_mesh_from_surface_mesh('out.vtu')
 """
 pymesh = pygalmesh.generate_volume_mesh_from_surface_mesh('out.vtu', min_facet_angle=50.0,
     max_radius_surface_delaunay_ball=3.0,

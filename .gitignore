@@ -3,3 +3,9 @@
 /workspace.xml
 
 .idea
+
+# mesh files
+*.inp
+*.stl
+*.vtu
+*.msh
